@@ -18,7 +18,7 @@ SYNTAX:
 For clarity, all commands that could not be run without this program (just regular old TI-BASIC) will be refered to as pseudocode.
 NOTE: all commands in TI-BASIC will be run as is without modifications, so the color and position variables only matter if it is pseudocode using ,text
 
-(y,x)         Sets the position where the next text will be drawn.
+([y],[x])         Sets the position where the next text will be drawn.
               Rather than setting the position, it can be incremented by putting + or - before the number, or kept the same by not putting a number at all:
               Examples: (-3,) (,+5) (2,3)
 
@@ -32,7 +32,7 @@ NOTE: all commands in TI-BASIC will be run as is without modifications, so the c
               Inside the tags, any TI-BASIC code or pseudocode can be included, and can span multiple lines. Make sure that no unnecessary characters are included.
               Default: <l>(+12,)</l>
 
-,text         Replaced with Text(y,x,text) using the color that was last defined. The default character is , but can be defined with the TCHAR command.
+,[text]         Replaced with Text(y,x,text) using the color that was last defined. The default character is , but can be defined with the TCHAR command.
 
 ;;;           Triggers new page immediately, can be changed with the NPAGE command
 
