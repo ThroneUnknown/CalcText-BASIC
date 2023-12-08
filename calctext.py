@@ -186,8 +186,9 @@ def parse_line(line):
             words = [word + " " for word in word_list[:-1]]
             words.append(word_list[len(word_list)-1])
             for word in range(len(words)):
-                if char not in dict:
-                    CHARWIDTHS[char] = 8
+                for char in words[word]:
+                    if char[:] not in CHARWIDTHS:
+                        CHARWIDTHS[char] = 8
                 if pxlcount + sum([CHARWIDTHS[char] for char in words[word]]) > 264:
                     newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
                     page_position[0] += 12
@@ -202,6 +203,8 @@ def parse_line(line):
 
         else:
             for char in range(len(line[1:])):
+                if char not in CHARWIDTHS:
+                    CHARWIDTHS[char] = 8
                 if pxlcount + CHARWIDTHS[line[1 + char]] >= 264:
                     newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
                     page_position[0] += 12
