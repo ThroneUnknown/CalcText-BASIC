@@ -157,15 +157,19 @@ def parse_line(line):
         if page_position[1] >= 264:
             parse_line(settings["NLINE"])
         elif page_position[0] >= 160:
-            parse_line(esttings["NPAGE"])
+            parse_line(settings["NPAGE"])
     # New line
     elif line == settings["NLINE"]:
         try:
             for instruction in new_line:
+                if instruction[0] == ",":
+                    newf.append(f'Text({page_position[0]},{page_position[1]},"{instruction[1:]}"')
+                    continue
                 parse_line(instruction)
         except RecursionError:
             print("NEW LINE")
-            raise RecursionError
+            RecursionError
+            # raise RecursionError
     # New page
     elif line == settings["NPAGE"]:
         try:
@@ -252,9 +256,10 @@ if __name__ == "__main__":
         elif "<p>" in current_line:
             mode = "newpage"
             current_line = current_line[3:]
+            line_buffer = []
         if "</l>" in current_line:
             line_buffer.append(current_line[:-4])
-            header = line_buffer[:]
+            new_line = line_buffer[:]
             line_buffer = []
             mode = "normal"
             continue
