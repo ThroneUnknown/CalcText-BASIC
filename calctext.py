@@ -157,7 +157,11 @@ def parse_line(line):
         if page_position[1] >= 264:
             parse_line(settings["NLINE"])
         elif page_position[0] >= 160:
+            oldposition = page_position[1]
+            oldcolor = color[:]
             parse_line(settings["NPAGE"])
+            parse_line(f"(,{oldposition})")
+            parse_line(oldcolor)
     # New line
     elif line == settings["NLINE"]:
         try:
@@ -214,7 +218,6 @@ def parse_line(line):
                     page_position[0] += 12
                     if page_position[0] >= 152:
                         parse_line(settings["NPAGE"])
-                        parse_line(oldcolor)
                         parse_line(f"(,{oldposition})")
                     current = ""
                     pxlcount = page_position[1]
@@ -275,7 +278,6 @@ if __name__ == "__main__":
         
         parse_line(current_line)
         
-    
     # Write to output file
     newf = [newf[i] + "\n" for i in range(len(newf))]
     with open(args[2], "w") as f:
