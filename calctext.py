@@ -107,12 +107,23 @@ CHARWIDTHS = {
     '~': 6,  # Negative symbol
     '`': 8
 }
+tags = {  # Must be single character
+    'l': ["(,+12)"],  # Default line end behavior
+    'p': ["Pause ", "ClrDraw ", "(0,0)"],  # Default new page behvavior
+    'w': ["(,+12)"]  # Default line wrap behavior
+}
+tag_triggers = {
+    'l': ",,,",
+    'p': ";;;",
+}
+inv_triggers = { v:k for k, v in tag_triggers.items()}
+tag_editing = []
 settings = {  # Keys MUST be 5 characters
     "TCHAR": ",",  # Character before text to use Text( for
     "WWRAP": 1,  # Wrap words separated by SPLIT instead of just characters
     "SPLIT": " ",  # Character that splits words to be wrapped
-    "NPAGE": ";;;",  # Triggers new page code
-    "NLINE": ",,,",  # Triggers new line code
+    "NPAGE": 1,  # Triggers new page code
+    "NLINE": 1,  # Triggers new line code
 }
 
 
@@ -135,16 +146,73 @@ def parse_line(line):
     global newf
     global settings
     global color
+    global tags
+    global tag_editing
     
-    # Commet or blank lines ignored, comes first to avoid IndexError
+    # Comment or blank lines ignored, comes first to avoid IndexError
     if line == "" or line[:2] == "//":
         newf.append(line[:])
         return None
-    elif line.split(" ")[0] in settings:
-        if line[5:] == "1" or line[5:] == "0":
-            settings[line[:5]] == int(line[5:])
+    
+    # Check if editing tags
+    if tag_editing != []:
+        current_line = line[:]
+        for tag in tag_editing:
+            # Check if tag is closed
+            if "</" + tag + ">" in current_line:
+                current_line = "".join(current_line.split("</" + tag + ">")
+                tag_editing.remove(tag)
+            tags[tag].append(current_line[:])
+        # Check if tag is opened
+        checker = ""
+        opened = []
+        for i in range(len(current_line)):
+            if current_line[i] == "<":
+                checker == "<"
+            elif checker == "<" and current_line[i] != "/":
+                checker += current_line[i]
+            elif current_line[i] == ">" and (checker != "" and checker != "<"):\
+                opened.append(checker[1:-1])
+                tags[checker[1:-1]] = []
+                tag_editing.append(checker[1:-1])
+                checker = ""
+        for tag in opened:
+            # Check if tag is closed
+            if "</" + tag + ">" in current_line:
+                current_line = "".join(current_line.split("</" + tag + ">")
+                tag_editing.remove(tag)
+            tags[tag].append(current_line[:])
+        return None  # Don't want to parse anything
+    # Check for opened tags
+    else:
+        current_line = line[:]
+        checker = ""
+        opened = []
+        for i in range(len(current_line)):
+            if current_line[i] == "<":
+                checker == "<"
+            elif checker == "<" and current_line[i] != "/":
+                checker += current_line[i]
+            elif current_line[i] == ">" and (checker != "" and checker != "<"):\
+                opened.append(checker[1:-1])
+                tags[checker[1:-1]] = []
+                tag_editing.append(checker[1:-1])
+                checker = ""
+        for tag in opened:
+            # Check if tag is closed
+            if "</" + tag + ">" in current_line:
+                current_line = "".join(current_line.split("</" + tag + ">")
+                tag_editing.remove(tag)
+            tags[tag].append(current_line[:])
+        return None  # Don't want to parse anything
+    
+    # Check for setting change
+    if line.split(" ")[0] in settings:
+        changes = line.split(" ")
+        if changes[1] == "1" or changes[1] == "0":  # Boolean change
+            settings[changes[0]] == int(changes[1])
         else:
-            settings[line[:5]] == line[5:]
+            settings[change[0]] == line[len(changes[0])+1:]
     # Change color
     elif line in COLORS:
         newf.append(f"TextColor({line}")
@@ -155,14 +223,14 @@ def parse_line(line):
         page_position = [parse_number(parsing[0], page_position[0]), 
         parse_number(parsing[1], page_position[1])]
         if page_position[1] >= 264:
-            parse_line(settings["NLINE"])
-        elif page_position[0] >= 160:
-            parse_line(settings["NPAGE"])
+            parse_line(tag_triggers["l"])
+        elif page_position[0] >= 154:
+            parse_line(tag_triggers["p"])
     # New line
-    elif line == settings["NLINE"]:
+    elif line == tag_triggers["l"]:
         try:
             for instruction in new_line:
-                if instruction[0] == ",":
+                if instruction[0] == settings["TCHAR"]:
                     newf.append(f'Text({page_position[0]},{page_position[1]},"{instruction[1:]}"')
                     continue
                 parse_line(instruction)
@@ -171,13 +239,17 @@ def parse_line(line):
             RecursionError
             # raise RecursionError
     # New page
-    elif line == settings["NPAGE"]:
+    elif line == tag_triggers["p"]:
         try:
             for instruction in new_page:
                 parse_line(instruction)
         except RecursionError:
             print("NEW PAGE")
             raise RecursionError
+    # Other tags are triggered:
+    elif line in list(inv_triggers.keys()):
+        for instruction in tags[inv_triggers[line]]:
+            parse_line(instruction)
     # Text( function is used here
     elif line[0] == settings["TCHAR"]:
         current = ""
@@ -196,15 +268,14 @@ def parse_line(line):
                 if pxlcount + sum([CHARWIDTHS[char] for char in words[word]]) > 264:
                     newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
                     page_position[0] += 12
-                    if page_position[0] >= 152:
-                        parse_line(settings["NPAGE"])
+                    if page_position[0] >= 152 and settings["NPAGE"] == 1:
+                        parse_line(tag_triggers["p"])
                         parse_line(oldcolor)
                         parse_line(f"(,{oldposition})")
                     current = ""
                     pxlcount = page_position[1]
                 current += words[word]
                 pxlcount += sum(CHARWIDTHS[char] for char in words[word])
-
         else:
             for char in range(len(line[1:])):
                 if char not in CHARWIDTHS:
@@ -212,8 +283,8 @@ def parse_line(line):
                 if pxlcount + CHARWIDTHS[line[1 + char]] >= 264:
                     newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
                     page_position[0] += 12
-                    if page_position[0] >= 152:
-                        parse_line(settings["NPAGE"])
+                    if page_position[0] >= 152 and settings["NPAGE"] == 1:
+                        parse_line(tag_triggers["p"])
                         parse_line(oldcolor)
                         parse_line(f"(,{oldposition})")
                     current = ""
@@ -222,7 +293,8 @@ def parse_line(line):
                 pxlcount += CHARWIDTHS[line[1 + char]]
         if current != "":
             newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
-        parse_line(settings["NLINE"])
+        if settings["NLINE"]:
+            parse_line(tag_triggers["l"])
     # Change text color
     elif line in COLORS:
         newf.append(f"TextColor({line}")
