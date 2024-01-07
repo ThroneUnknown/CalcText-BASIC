@@ -1,7 +1,7 @@
 import sys
 
 
-COLORS = ["BLUE", "RED", "BLACK", "MAGENTA", "GREEN", "ORANGE", "BROWN", "NAVY", "LTBLUE", "YELLOW", "WHITE", "LTGRAY", "MEDGRAY", "GRAY", "DARKGRAVY"]
+COLORS = ["BLUE", "RED", "BLACK", "MAGENTA", "GREEN", "ORANGE", "BROWN", "NAVY", "LTBLUE", "YELLOW", "WHITE", "LTGRAY", "MEDGRAY", "GRAY", "DARKGRAY"]
 # Widths of all characters in pixels
 CHARWIDTHS = {
     'a': 10,
@@ -108,13 +108,14 @@ CHARWIDTHS = {
     '`': 8
 }
 tags = {  # Must be single character
-    'l': ["(,+12)"],  # Default line end behavior
+    'l': ["(+12,)"],  # Default line end behavior
     'p': ["Pause ", "ClrDraw ", "(0,0)"],  # Default new page behvavior
-    'w': ["(,+12)"]  # Default line wrap behavior
+    'w': ["(+12,)"],  # Default line wrap behavior
+    'b': ["__BLANK"]  # Default behavior at beginning of line
 }
 tag_triggers = {
     'l': ",,,",
-    'p': ";;;",
+    'p': ";;;"
 }
 inv_triggers = { v:k for k, v in tag_triggers.items()}
 tag_editing = []
@@ -124,6 +125,10 @@ settings = {  # Keys MUST be 5 characters
     "SPLIT": " ",  # Character that splits words to be wrapped
     "NPAGE": 1,  # Triggers new page code
     "NLINE": 1,  # Triggers new line code
+    "BLINE": 1,  # Triggers beginning line code
+    "EMPTYLINE": '__BLANK',  # Skips without adding anything to line
+    "SPLITCHAR": "`",  # Splits lines, doesn't necessarily need to be a single character
+    "SPLITLINES": 0  # Enables having multiple commands in one line, separated by SPLITCHAR
 }
 
 
@@ -140,7 +145,7 @@ def parse_number(number, current):
 
 
 # Interpret line of code
-def parse_line(line):
+def parse_line(line, r=0):
     # Too lazy to have good habits
     global page_position
     global newf
@@ -149,18 +154,20 @@ def parse_line(line):
     global tags
     global tag_editing
     
-    # Comment or blank lines ignored, comes first to avoid IndexError
-    if line == "" or line[:2] == "//":
+    # Blank lines ignored, comes first to avoid IndexError
+    if line == "":
         newf.append(line[:])
         return None
-    
+    # Check if line should be skipped completely
+    elif line == settings["EMPTYLINE"]:
+        return None
     # Check if editing tags
     if tag_editing != []:
         current_line = line[:]
         for tag in tag_editing:
             # Check if tag is closed
             if "</" + tag + ">" in current_line:
-                current_line = "".join(current_line.split("</" + tag + ">")
+                current_line = "".join(current_line.split("</" + tag + ">"))
                 tag_editing.remove(tag)
             tags[tag].append(current_line[:])
         # Check if tag is opened
@@ -169,50 +176,75 @@ def parse_line(line):
         for i in range(len(current_line)):
             if current_line[i] == "<":
                 checker == "<"
-            elif checker == "<" and current_line[i] != "/":
+            elif current_line[i] == "/":
+                checker = ""
+            elif checker == "<":
                 checker += current_line[i]
-            elif current_line[i] == ">" and (checker != "" and checker != "<"):\
-                opened.append(checker[1:-1])
-                tags[checker[1:-1]] = []
-                tag_editing.append(checker[1:-1])
+            elif current_line[i] == ">" and checker != "" and checker != "<":
+                opened.append(checker[1:])
+                tags[checker[1:]] = []
+                tag_editing.append(checker[1:])
                 checker = ""
         for tag in opened:
             # Check if tag is closed
             if "</" + tag + ">" in current_line:
-                current_line = "".join(current_line.split("</" + tag + ">")
+                current_line = "".join(current_line.split("</" + tag + ">"))
                 tag_editing.remove(tag)
             tags[tag].append(current_line[:])
         return None  # Don't want to parse anything
-    # Check for opened tags
+    # Check if a tag is opened when none are currently
     else:
         current_line = line[:]
+        new_current_line = line[:]  # Take out opening tags from current_line
         checker = ""
         opened = []
+        # Check if tag is opened
         for i in range(len(current_line)):
             if current_line[i] == "<":
-                checker == "<"
+                checker = "<"
+            elif current_line[i] == "/":
+                checker = ""
             elif checker == "<" and current_line[i] != "/":
                 checker += current_line[i]
-            elif current_line[i] == ">" and (checker != "" and checker != "<"):\
+            elif current_line[i] == ">" and (checker != "" and checker != "<"):
+                checker += current_line[i]
                 opened.append(checker[1:-1])
                 tags[checker[1:-1]] = []
                 tag_editing.append(checker[1:-1])
+                new_current_line = "".join(new_current_line.split(checker))
                 checker = ""
+        final_current_line = new_current_line[:]
         for tag in opened:
+            print("---")
+            print(line)
+            print(opened)
+            print("---")
             # Check if tag is closed
-            if "</" + tag + ">" in current_line:
-                current_line = "".join(current_line.split("</" + tag + ">")
+            if "</" + tag + ">" in new_current_line:
+                final_current_line = "".join(final_current_line.split("</" + tag + ">"))
+                print(new_current_line)
+                print(final_current_line)
+                print()
                 tag_editing.remove(tag)
-            tags[tag].append(current_line[:])
-        return None  # Don't want to parse anything
-    
+            tags[tag].append(final_current_line[:])
+        if opened != []:
+            return None  # Don't want to parse anything
+    # Check if the line should be split up with multiple commands
+    if settings["SPLITCHAR"] in line and settings["SPLITLINES"]:
+        for split_line in line.split(settings["SPLITCHAR"]):
+            parse_line(split_line)
+        return None
     # Check for setting change
-    if line.split(" ")[0] in settings:
+    elif line.split(" ")[0] in list(settings.keys()):
         changes = line.split(" ")
         if changes[1] == "1" or changes[1] == "0":  # Boolean change
-            settings[changes[0]] == int(changes[1])
+            settings[changes[0]] = int(changes[1])
         else:
-            settings[change[0]] == line[len(changes[0])+1:]
+            settings[change[0]] = line[len(changes[0])+1:]
+    # Check for tag trigger changes
+    elif line[1:9] == "TRIGGER" and line[0] in list(CHARWIDTHS.keys()):
+        tag_triggers[line[0]] = line[9:]
+        inv_triggers[line[9:]] = line[0]
     # Change color
     elif line in COLORS:
         newf.append(f"TextColor({line}")
@@ -229,22 +261,23 @@ def parse_line(line):
     # New line
     elif line == tag_triggers["l"]:
         try:
-            for instruction in new_line:
+            for instruction in tags["l"]:
                 if instruction[0] == settings["TCHAR"]:
                     newf.append(f'Text({page_position[0]},{page_position[1]},"{instruction[1:]}"')
                     continue
                 parse_line(instruction)
         except RecursionError:
-            print("NEW LINE")
-            RecursionError
+            print("NEW LINE RECURSION ERROR")
+            quit()
+            raise RecursionError
             # raise RecursionError
     # New page
     elif line == tag_triggers["p"]:
         try:
-            for instruction in new_page:
+            for instruction in tags["p"]:
                 parse_line(instruction)
         except RecursionError:
-            print("NEW PAGE")
+            print("NEW PAGE RECURSION ERROR")
             raise RecursionError
     # Other tags are triggered:
     elif line in list(inv_triggers.keys()):
@@ -257,18 +290,30 @@ def parse_line(line):
         pxlcount = page_position[1]
         oldcolor = color[:]
         oldposition = page_position[1]
+        prelined = False
         if settings["WWRAP"]:
-            word_list = line[1:].split(settings["SPLIT"])  # For word wrap, each word is taken into account for determining pixels rather than character
+            # For word wrap, each word is taken into account for determining pixels rather than character
+            word_list = line[1:].split(settings["SPLIT"])  
             words = [word + " " for word in word_list[:-1]]
             words.append(word_list[len(word_list)-1])
             for word in range(len(words)):
                 for char in words[word]:
                     if char[:] not in CHARWIDTHS:
                         CHARWIDTHS[char] = 8
+                # Need to word wrap
                 if pxlcount + sum([CHARWIDTHS[char] for char in words[word]]) > 264:
+                    # Proccess pre-line behavior if not already done and needs to be
+                    if settings["BLINE"] and prelined == False:
+                        for instruction in tags["b"]:
+                            if instruction[0] == settings["TCHAR"]:  # Avoid infinite loops
+                                newf.append(f'Text({page_position[0]},{page_position[1]},"{instruction[1:]}"')
+                            else:
+                                parse_line(instruction)
+                        prelined = True
                     newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
-                    page_position[0] += 12
-                    if page_position[0] >= 152 and settings["NPAGE"] == 1:
+                    for instruction in tags["w"]:  # Line wrap behavior
+                        parse_line(instruction)
+                    if page_position[0] >= 152 and settings["NPAGE"] == 1:  # Page wrap behavior
                         parse_line(tag_triggers["p"])
                         parse_line(oldcolor)
                         parse_line(f"(,{oldposition})")
@@ -280,9 +325,18 @@ def parse_line(line):
             for char in range(len(line[1:])):
                 if char not in CHARWIDTHS:
                     CHARWIDTHS[char] = 8
+                # Word wrap
                 if pxlcount + CHARWIDTHS[line[1 + char]] >= 264:
+                    # Process pre-line behavior if not already done and needs to be
+                    if settings["BLINE"] and prelined == False:
+                        for instruction in tags["b"]:
+                            if instruction[0] == settings["TCHAR"]:  # Avoid infinite loops
+                                newf.append(f'Text({page_position[0]},{page_position[1]},"{instruction[1:]}"')
+                            else:
+                                parse_line(instruction)
                     newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
-                    page_position[0] += 12
+                    for instruction in tags["w"]:
+                        parse_line(instruction)
                     if page_position[0] >= 152 and settings["NPAGE"] == 1:
                         parse_line(tag_triggers["p"])
                         parse_line(oldcolor)
@@ -295,9 +349,6 @@ def parse_line(line):
             newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
         if settings["NLINE"]:
             parse_line(tag_triggers["l"])
-    # Change text color
-    elif line in COLORS:
-        newf.append(f"TextColor({line}")
     # Everything else is assumed to be a proper TI-BASIC command
     else:
         newf.append(line)
@@ -311,44 +362,15 @@ if __name__ == "__main__":
 
     # Default file variables
     color = "BLACK"
-    new_page = ["Pause ", "ClrDraw ", "(0,0)"]
-    new_line = ["(+12,)"]
     page_position = [0,0]
     
     # Keep track of program flow
     newf = []
-    mode = "normal"
-    line_buffer = []
-    for line in range(len(file)):
-        current_line = file[line][:]
-        # Check for header or newpage, or process these
-        if "<l>" in current_line:
-            mode = "newline"
-            current_line = current_line[3:]
-        elif "<p>" in current_line:
-            mode = "newpage"
-            current_line = current_line[3:]
-            line_buffer = []
-        if "</l>" in current_line:
-            line_buffer.append(current_line[:-4])
-            new_line = line_buffer[:]
-            line_buffer = []
-            mode = "normal"
-            continue
-        elif "</p>" in current_line:
-            line_buffer.append(current_line[:-4])
-            new_page = line_buffer[:]
-            line_buffer = []
-            mode = "normal"
-            continue
-        elif mode == "newline" or mode == "newpage":
-            line_buffer.append(current_line)
-            continue
+    for line in file:
+        parse_line(str(line))
         
-        parse_line(current_line)
-        
-    
     # Write to output file
+    print(newf)
     newf = [newf[i] + "\n" for i in range(len(newf))]
     with open(args[2], "w") as f:
         f.writelines(newf)

@@ -1,4 +1,5 @@
 *.swp
+*.8xp
 .gitignore
 test.txt
 testinput.txt
