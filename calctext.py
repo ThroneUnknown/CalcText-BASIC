@@ -132,6 +132,57 @@ settings = {  # Keys MUST be 5 characters
 }
 
 
+# Processes tags that are being edited, and check if any are in the first place
+def tag_editor(lines):
+    global tags
+    
+    # Note: tags are only updated when outermost tag is closed
+    # Find all opened and closed tags
+    opened = []
+    opositions = []  # Position of opening tag, in format (line, character)
+    closed = []
+    cpositions = []
+    
+    # Find opened and closed tags, as well as their position
+    for i in range(len(lines)):
+        checker = ""
+        for j in range(len(line)):
+            if lines[i][j] == "<":
+                checker = "<"
+            elif lines[i][j] == "/" and checker == "<":
+                checker = "</"
+            elif lines[i][j] == ">" and len(checker) == 2 and "/" not in checker:  # Tag is opened
+                opened.append(checker[1])
+                opositions.append(i, j)
+            elif lines[i][j] == ">" and len(checker) == 3 and checker[:2] == "</":  # Tag is closed
+                closed.append(checker[2])
+                cpositions.append(i, j-4)
+            else:
+                checker = checker + lines[i][j]
+    if opened == []:
+        return "NO TAGS"
+    # If top level tag not closed, return True to show that tags still being edited
+    elif opened[0] not in closed:
+        return "EDITING TAGS"
+    # Write to tags dictionary
+    for t in range(len(opened)):
+        # Slice lines so that lines with opening and closing tags only have relevant instructions
+        sliced = lines[:]
+        # If tag is opened and closed in same line, list will update that by only changing the relevant line.
+        if opositions[t][0] == cpositions[t][0]:
+            sliced = [sliced[t][oposition[t][1]:cposition[t][1]]]
+        else:
+            sliced = sliced[opositions[t][0]:cpositions[t][0] + 1]
+            sliced[0] = sliced[0][:opositions[t][1]]
+            sliced[-1] = sliced[-1][cpositions[t][1]:]
+        
+        # Add tags to dictionary
+        tags[opened[t]] = sliced[:]
+    
+    # Return true to not process remainder of line 
+    return lines[-1][cpositions[0][1]:]
+
+
 # Processes a number that can be an increment, nothing, or set it
 def parse_number(number, current):
     if number == "":
@@ -145,8 +196,9 @@ def parse_number(number, current):
 
 
 # Interpret line of code
-def parse_line(line, r=0):
-    # Too lazy to have good habits
+def parse_line(baseline, r=0):
+    # Easier to just use a function for this rather than loop (due to recursion),
+    # so global variables must be used
     global page_position
     global newf
     global settings
@@ -155,6 +207,7 @@ def parse_line(line, r=0):
     global tag_editing
     
     # Blank lines ignored, comes first to avoid IndexError
+    line = baseline[:]
     if line == "":
         newf.append(line[:])
         return None
@@ -175,7 +228,7 @@ def parse_line(line, r=0):
         opened = []
         for i in range(len(current_line)):
             if current_line[i] == "<":
-                checker == "<"
+                checker = "<"
             elif current_line[i] == "/":
                 checker = ""
             elif checker == "<":
@@ -214,11 +267,8 @@ def parse_line(line, r=0):
                 new_current_line = "".join(new_current_line.split(checker))
                 checker = ""
         final_current_line = new_current_line[:]
+        if opened != []:
         for tag in opened:
-            print("---")
-            print(line)
-            print(opened)
-            print("---")
             # Check if tag is closed
             if "</" + tag + ">" in new_current_line:
                 final_current_line = "".join(final_current_line.split("</" + tag + ">"))
@@ -370,7 +420,7 @@ if __name__ == "__main__":
         parse_line(str(line))
         
     # Write to output file
-    print(newf)
+    # print(newf)
     newf = [newf[i] + "\n" for i in range(len(newf))]
     with open(args[2], "w") as f:
         f.writelines(newf)
