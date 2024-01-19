@@ -376,8 +376,9 @@ if __name__ == "__main__":
     for line in file:
         parse_line(str(line))
     
-    print(newf)
     # Write to output file
     newf = [newf[i] + "\n" for i in range(len(newf))]
     with open(args[2], "w") as f:
         f.writelines(newf)
+    
+    print(f"{len(file)} lines processed, {len(newf)} lines written to {args[2]}")
