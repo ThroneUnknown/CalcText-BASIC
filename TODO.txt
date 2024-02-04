@@ -1,0 +1,33 @@
+Alignment:
+    Left
+        (default)
+    Right
+        Change x position of Text(
+        Calculate position as 264 - space left in pixels
+    Center
+        Change x position of Text(
+        Calculate position as (264 - space left in pixels) / 2
+ 
+Tag Definement:
+    Change <a> to <@a> to reduce confusion from using <-> as doubleheaded arrow
+    Multiple characters long, eg. <@bullet>
+        Must be done for triggers too, eg. bulletTRIGGER BULLET
+    Functions
+        Syntax: <@name "parameter1" "parameter2">
+        Referencing parameters: @parameter1, #parameter2
+            @ <- Used for strings
+            # <- Used for numbers
+        Returning values: RETURN @value or RETURN #value
+        Calling Tag:
+            nameTRIGGER trigger (normal trigger defining)
+            trigger "string" "number"
+
+Templates/Preset Tags:
+    Headers
+        <@header "text"><p>Pause `ClrDraw`BLUE
+        Text(0,0,"@text"
+        Line(~10,8,10,8
+        (18,0)`BLACK</p></header>
+    Bullets
+        <@bullets><b>,-
+        (,+9)</b><l>(+12,-9)</l></bullets>

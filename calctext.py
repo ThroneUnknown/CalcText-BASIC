@@ -151,12 +151,13 @@ def tag_editor(lines):
                 checker = "<"
             elif lines[i][j] == "/" and checker == "<":
                 checker = "</"
-            elif lines[i][j] == ">" and len(checker) == 2 and "/" not in checker:  # Tag is opened
-                opened.append(checker[1])
+            elif lines[i][j] == ">" and checker[:2] == "<@":  # Tag is opened
+                opened.append(checker[2:])
                 opositions.append([i, j+1])
-            elif lines[i][j] == ">" and len(checker) == 3 and checker[:2] == "</":  # Tag is closed
-                closed.append(checker[2])
-                cpositions.insert(opened.index(checker[2]), [i, j-3])
+            elif lines[i][j] == ">" and checker[:2] == "</":  # Tag is closed
+                closed.append(checker[2:])
+                cpositions.insert(opened.index(checker[2:]), [i, j-len(checker)])
+                print(opened)
             else:
                 checker = checker + lines[i][j]
     # Return current line to be interpreted
@@ -255,7 +256,7 @@ def parse_line(baseline, r=0):
         else:
             settings[change[0]] = line[len(changes[0])+1:]
     # Check for tag trigger changes
-    elif line[1:9] == "TRIGGER " and line[0] in list(CHARWIDTHS.keys()):
+    elif "TRIGGER " in line and line[:line.index("TRIGGER ")] in list(CHARWIDTHS.keys()):
         tag_triggers[line[0]] = line[9:]
         inverse_triggers[line[9:]] = line[0]
     # Change color
