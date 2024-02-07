@@ -24,22 +24,22 @@ NOTE: all commands in TI-BASIC will be run as is without modifications, so the c
               Rather than setting the position, it can be incremented by putting + or - before the number, or kept the same by not putting a number at all:
               Examples: (-3,) (,+5) (2,3)
 
-<p>...</p>	  Set the code that will be executed for each new page.
+<@p>...</p>	  Set the code that will be executed for each new page.
               Inside the tags, any TI-BASIC code or pseudocode can be included, and can span multiple lines. Make sure that no unnecessary characters are included.
               Default: <p>Pause 
                        ClrDraw 
                        (0,0)</p>
 
-<l>...</l>    Set the code that will be executed after each line.
+<@l>...</l>    Set the code that will be executed after each line.
               Inside the tags, any code or commands can be included, and can span multiple lines. Make sure that no unnecessary characters are included.
               Default: <l>(+12,)</l>
 
-<b>...</b>    Set the code that will be executed at the beginning of each line
+<@b>...</b>    Set the code that will be executed at the beginning of each line
 
 [character]TRIGGER [trigger]     Sets the trigger for a specific tag, such as <b>, <l>, <p>, or any user defined tags.
               Examples: aTRIGGER @@@ or fbTRIGGER BLINE
                                  
-<[character]>...</[character]>   Used to set a tag, similar to <b> and <p>, but is not automatically run at any time. Instead a trigger must be set (eg. @@@)
+<[character]>...</[character]>   Used to set a tag, similar to <@b> and <@p>, but is not automatically run at any time. Instead a trigger must be set (eg. @@@)
 
 ,[text]         Replaced with Text(y,x,text) using the color that was last defined. The default character is , but can be defined with the TCHAR command.
 
