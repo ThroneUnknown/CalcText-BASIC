@@ -121,6 +121,7 @@ inverse_triggers = { v:k for k, v in tag_triggers.items()}
 tag_editing = []
 settings = {  # Keys MUST be 5 characters
     "TCHAR": ",",  # Character before text to use Text( for
+    "ALIGN": "LEFT",  # Alignment of text
     "WWRAP": 1,  # Wrap words separated by SPLIT instead of just characters
     "SPLIT": " ",  # Character that splits words to be wrapped
     "NPAGE": 1,  # Triggers new page code
@@ -157,7 +158,6 @@ def tag_editor(lines):
             elif lines[i][j] == ">" and checker[:2] == "</":  # Tag is closed
                 closed.append(checker[2:])
                 cpositions.insert(opened.index(checker[2:]), [i, j-len(checker)])
-                print(opened)
             else:
                 checker = checker + lines[i][j]
     # Return current line to be interpreted
@@ -185,8 +185,7 @@ def tag_editor(lines):
     if lines[-1][cpositions[0][1]+4:] == "":
         return settings["EMPTYLINE"][:]
     else:
-        return lines[-1][cpositions[0][1]+4:]
-
+        return lines[-1][cpositions[0][1] + 3 + len(opened[0]):]
 
 # Processes a number that can be an increment, nothing, or set it
 def parse_number(number, current):
@@ -198,6 +197,23 @@ def parse_number(number, current):
         return current + int(number[1:])
     else:
         return int(number)
+
+
+def align_text(text, width=-1):
+    global newf
+    global page_position
+
+    if width == -1:
+        pxlcount = sum([CHARWIDTHS[char] for char in text])
+        pxlcount += page_position[1]
+    else:
+        pxlcount = width
+    if settings["ALIGN"] == "LEFT":
+        newf.append(f'Text({page_position[0]},{page_position[1]},"{text}"')
+    elif settings["ALIGN"] == "RIGHT":
+        newf.append(f'Text({page_position[0]},{264 - pxlcount},"{text}"')
+    elif settings["ALIGN"] == "CENTER":
+        newf.append(f'Text({page_position[0]},{round(132 - (pxlcount/2))},"{text}"')
 
 
 # Interpret line of code
@@ -247,18 +263,18 @@ def parse_line(baseline, r=0):
         for split_line in line.split(settings["SPLITCHAR"]):
             parse_line(split_line)
         return None
-    
+
     # Check for setting change
     if line.split(" ")[0] in list(settings.keys()):
         changes = line.split(" ")
         if changes[1] == "1" or changes[1] == "0":  # Boolean change
             settings[changes[0]] = int(changes[1])
         else:
-            settings[change[0]] = line[len(changes[0])+1:]
+            settings[changes[0]] = line[len(changes[0])+1:]
     # Check for tag trigger changes
-    elif "TRIGGER " in line and line[:line.index("TRIGGER ")] in list(CHARWIDTHS.keys()):
-        tag_triggers[line[0]] = line[9:]
-        inverse_triggers[line[9:]] = line[0]
+    elif "TRIGGER " in line:
+        tag_triggers[line[:line.index("TRIGGER ")]] = line[line.index("TRIGGER ")+8:]
+        inverse_triggers[line[line.index("TRIGGER ")+8:]] = line[:line.index("TRIGGER ")]
     # Change color
     elif line in COLORS:
         newf.append(f"TextColor({line}")
@@ -277,9 +293,9 @@ def parse_line(baseline, r=0):
         try:
             for instruction in tags["l"]:
                 if instruction[0] == settings["TCHAR"]:
-                    newf.append(f'Text({page_position[0]},{page_position[1]},"{instruction[1:]}"')
-                    continue
-                parse_line(instruction)
+                    align_text(instruction[1:])
+                else:
+                    parse_line(instruction)
         except RecursionError:
             print("NEW LINE RECURSION ERROR")
             quit()
@@ -301,15 +317,15 @@ def parse_line(baseline, r=0):
     elif line[0] == settings["TCHAR"]:
         current = ""
         # Save old position and color in case new page is needed
-        pxlcount = page_position[1]
         oldcolor = color[:]
         if settings["BLINE"]:
             for instruction in tags["b"]:
                 if instruction[0] == settings["TCHAR"]:
-                    newf.append(f'Text({page_position[0]},{page_position[1]},"{instruction[1:]}"')
+                    align_text(instruction[1:])
                 else:
                     parse_line(instruction)
         oldposition = page_position[1]
+        pxlcount = page_position[1]
         if settings["WWRAP"]:
             # For word wrap, each word is taken into account for determining pixel width rather than character
             word_list = line[1:].split(settings["SPLIT"])  
@@ -321,7 +337,8 @@ def parse_line(baseline, r=0):
                         CHARWIDTHS[char] = 8
                 # Need to word wrap
                 if pxlcount + sum([CHARWIDTHS[char] for char in words[word]]) > 264:
-                    newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
+                    # Add text to file
+                    align_text(current, pxlcount)
                     for instruction in tags["w"]:
                         parse_line(instruction)
                         parse_line(f"(,{oldposition})")
@@ -340,7 +357,7 @@ def parse_line(baseline, r=0):
                     CHARWIDTHS[char] = 8
                 # Word wrap (but only on a character basis, not whole words)
                 if pxlcount + CHARWIDTHS[line[1 + char]] >= 264:
-                    newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
+                    align_text(current, pxlcount)
                     for instruction in tags["w"]:
                         parse_line(instruction)
                         parse_line(f"(,{oldposition})")
@@ -354,7 +371,7 @@ def parse_line(baseline, r=0):
                 current += line[1 + char]
                 pxlcount += CHARWIDTHS[line[1 + char]]
         if current != "":
-            newf.append(f'Text({page_position[0]},{page_position[1]},"{current}"')
+            align_text(current)
         if settings["NLINE"]:
             parse_line(tag_triggers["l"])
     # Everything else is assumed to be a proper TI-BASIC command

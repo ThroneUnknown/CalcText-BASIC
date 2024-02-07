@@ -1,16 +1,16 @@
 Alignment:
-    Left
-        (default)
-    Right
-        Change x position of Text(
-        Calculate position as 264 - space left in pixels
-    Center
-        Change x position of Text(
-        Calculate position as (264 - space left in pixels) / 2
+DONELeft
+DONE    (default)
+DONERight
+DONE    Change x position of Text(
+DONE    Calculate position as 264 - space left in pixels
+DONECenter
+DONE    Change x position of Text(
+DONE    Calculate position as (264 - space left in pixels) / 2
  
 Tag Definement:
-    Change <a> to <@a> to reduce confusion from using <-> as doubleheaded arrow
-    Multiple characters long, eg. <@bullet>
+DONEChange <a> to <@a> to reduce confusion from using <-> as doubleheaded arrow
+DONEMultiple characters long, eg. <@bullet>
         Must be done for triggers too, eg. bulletTRIGGER BULLET
     Functions
         Syntax: <@name "parameter1" "parameter2">

@@ -63,6 +63,8 @@ SPLIT [text]  Sets the character that splits words apart, determines what is wra
 [Color]       Set the color that is used for all TCHAR Text( commands will use, defaults to black.
               Example: GRAY  (Yes its literally that simple)
 
+ALIGN [direction]  Either LEFT, RIGHT, or CENTER. Aligns text in that direction. Simple
+
 
 
 EXAMPLE:

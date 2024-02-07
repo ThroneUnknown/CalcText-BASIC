@@ -4,6 +4,7 @@ BasicText CE is a utitily for writing code in Ti-BASIC meant to be used when wri
 ### FEATURES:
  - Character/Word wrapping around lines
  - Automation of incrementing pages when one is filled (Pauses, then goes to next page)
+ - Text alignment
  - Automation of incrementing lines (Increments pixels to next line)
  - Quality of life, you don't have to write out Text(x,y,"foobar"), but rather just ,foobar to show text
  - Highly customizable: change commands of what happens at the end of a line or page within your TI-BASIC program.
