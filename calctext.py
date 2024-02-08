@@ -155,7 +155,7 @@ def tag_editor(lines):
             elif lines[i][j] == ">" and checker[:2] == "<@":  # Tag is opened
                 opened.append(checker[2:])
                 opositions.append([i, j+1])
-            elif lines[i][j] == ">" and checker[:2] == "</":  # Tag is closed
+            elif lines[i][j] == ">" and checker[:2] == "</" and checker[2:] in opened:  # Tag is closed
                 closed.append(checker[2:])
                 cpositions.insert(opened.index(checker[2:]), [i, j-len(checker)])
             else:
@@ -167,7 +167,7 @@ def tag_editor(lines):
     elif opened[0] not in closed:
         return lines[:]
     # Write to tag dictionary (only want the outermost one written)
-        # Slice lines so that lines with opening and closing tags only have relevant instructions
+    # Slice lines so that lines with opening and closing tags only have relevant instructions
     sliced = lines[:]
     # If tag is opened and closed in same line, list will update that by only changing the relevant line.
     if opositions[0][0] == cpositions[0][0]:
@@ -182,10 +182,10 @@ def tag_editor(lines):
     
     # Return remainder of line not in tags
     # If line would be blank, just make it skip
-    if lines[-1][cpositions[0][1]+4:] == "":
+    if lines[0][:opositions[0][1] - len(opened[0]) - 3] + lines[-1][cpositions[0][1] + 3 + len(opened[0]):] == "":
         return settings["EMPTYLINE"][:]
     else:
-        return lines[-1][cpositions[0][1] + 3 + len(opened[0]):]
+        return lines[0][:opositions[0][1] - len(opened[0]) - 3] + lines[-1][cpositions[0][1] + 3 + len(opened[0]):]
 
 # Processes a number that can be an increment, nothing, or set it
 def parse_number(number, current):
